@@ -99,7 +99,7 @@ export default function LevelPage() {
         {/* Blocks */}
         <div className="space-y-6">
           {level.blocks.map((block, blockIndex) => {
-            const unlocked = isBlockUnlocked(progress, block.id, levelId);
+            const unlocked = isBlockUnlocked(progress, courseData, block.id);
             const completed = progress.blockScores[block.id] === 100;
             const blockLessons = block.lessons.length;
             const blockCompleted = block.lessons.filter(l => progress.lessonScores[l.id] === 100).length;
@@ -140,7 +140,7 @@ export default function LevelPage() {
                 {/* Lessons */}
                 <div className="space-y-2">
                   {block.lessons.map((lesson, lessonIndex) => {
-                    const lessonUnlocked = isLessonUnlocked(progress, lesson.id, block.id, levelId);
+                    const lessonUnlocked = isLessonUnlocked(progress, courseData, lesson.id);
                     const lessonScore = progress.lessonScores[lesson.id];
                     const lessonCompleted = lessonScore === 100;
 

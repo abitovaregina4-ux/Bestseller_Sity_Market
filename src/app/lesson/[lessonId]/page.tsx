@@ -54,7 +54,7 @@ export default function LessonPage() {
     );
   }
 
-  const unlocked = isLessonUnlocked(progress, lessonId, block?.id || '', level?.id || '');
+  const unlocked = isLessonUnlocked(progress, courseData, lessonId);
 
   if (!unlocked) {
     return (

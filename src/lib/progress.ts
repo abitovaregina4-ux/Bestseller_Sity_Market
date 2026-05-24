@@ -1,4 +1,4 @@
-import { UserProgress } from '@/types';
+import { UserProgress, Lesson, Block, Level } from '@/types';
 
 const PROGRESS_KEY = 'supermarket-training-progress';
 
@@ -63,10 +63,8 @@ export function completeLesson(progress: UserProgress, lessonId: string, score: 
   if (!completedLessons.includes(lessonId)) {
     completedLessons.push(lessonId);
   }
-
   const lessonScores = { ...progress.lessonScores };
   lessonScores[lessonId] = Math.max(lessonScores[lessonId] || 0, score);
-
   return addXP({ ...progress, completedLessons, lessonScores }, score * 10);
 }
 
@@ -75,48 +73,71 @@ export function completeBlock(progress: UserProgress, blockId: string, score: nu
   if (!completedBlocks.includes(blockId)) {
     completedBlocks.push(blockId);
   }
-
   const blockScores = { ...progress.blockScores };
   blockScores[blockId] = Math.max(blockScores[blockId] || 0, score);
-
   return addXP({ ...progress, completedBlocks, blockScores }, score * 20);
 }
 
-export function isLessonUnlocked(progress: UserProgress, lessonId: string, blockId: string, levelId: string): boolean {
-  const levelIndex = ['basic', 'intermediate', 'advanced'].indexOf(levelId);
+function findLessonInCourse(courseData: Level[], lessonId: string): { lesson: Lesson; block: Block; level: Level } | null {
+  for (const level of courseData) {
+    for (const block of level.blocks) {
+      const lesson = block.lessons.find(l => l.id === lessonId);
+      if (lesson) return { lesson, block, level };
+    }
+  }
+  return null;
+}
+
+function findBlockInCourse(courseData: Level[], blockId: string): { block: Block; level: Level } | null {
+  for (const level of courseData) {
+    const block = level.blocks.find(b => b.id === blockId);
+    if (block) return { block, level };
+  }
+  return null;
+}
+
+export function isLessonUnlocked(
+  progress: UserProgress,
+  courseData: Level[],
+  lessonId: string
+): boolean {
+  const found = findLessonInCourse(courseData, lessonId);
+  if (!found) return false;
+
+  const { level } = found;
+  const levelIndex = ['basic', 'intermediate', 'advanced'].indexOf(level.id);
   const currentLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(progress.currentLevel);
 
   if (levelIndex > currentLevelIndex) return false;
 
-  if (levelIndex < currentLevelIndex) return true;
-
-  const courseData = require('@/data/course').courseData;
-  const level = courseData.find((l: any) => l.id === levelId);
-  if (!level) return false;
-
-  const blockIndex = level.blocks.findIndex((b: any) => b.id === blockId);
-  const lessonIndex = level.blocks[blockIndex]?.lessons.findIndex((l: any) => l.id === lessonId);
+  const { block, lesson } = found;
+  const blockIndex = level.blocks.indexOf(block);
+  const lessonIndex = block.lessons.indexOf(lesson);
 
   if (lessonIndex === 0) return true;
 
-  const previousLesson = level.blocks[blockIndex]?.lessons[lessonIndex - 1];
+  const previousLesson = block.lessons[lessonIndex - 1];
   if (!previousLesson) return true;
 
   return progress.lessonScores[previousLesson.id] === 100;
 }
 
-export function isBlockUnlocked(progress: UserProgress, blockId: string, levelId: string): boolean {
-  const levelIndex = ['basic', 'intermediate', 'advanced'].indexOf(levelId);
+export function isBlockUnlocked(
+  progress: UserProgress,
+  courseData: Level[],
+  blockId: string
+): boolean {
+  const found = findBlockInCourse(courseData, blockId);
+  if (!found) return false;
+
+  const { level } = found;
+  const levelIndex = ['basic', 'intermediate', 'advanced'].indexOf(level.id);
   const currentLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(progress.currentLevel);
 
   if (levelIndex > currentLevelIndex) return false;
-  if (levelIndex < currentLevelIndex) return true;
 
-  const courseData = require('@/data/course').courseData;
-  const level = courseData.find((l: any) => l.id === levelId);
-  if (!level) return false;
-
-  const blockIndex = level.blocks.findIndex((b: any) => b.id === blockId);
+  const { block } = found;
+  const blockIndex = level.blocks.indexOf(block);
   if (blockIndex === 0) return true;
 
   const previousBlock = level.blocks[blockIndex - 1];
@@ -125,8 +146,7 @@ export function isBlockUnlocked(progress: UserProgress, blockId: string, levelId
   return progress.blockScores[previousBlock.id] === 100;
 }
 
-export function canAdvanceLevel(progress: UserProgress, targetLevel: string): boolean {
-  const courseData = require('@/data/course').courseData;
+export function canAdvanceLevel(progress: UserProgress, courseData: Level[], targetLevel: string): boolean {
   const currentLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(progress.currentLevel);
   const targetLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(targetLevel);
 
@@ -136,7 +156,7 @@ export function canAdvanceLevel(progress: UserProgress, targetLevel: string): bo
   const currentLevel = courseData[currentLevelIndex];
   if (!currentLevel) return false;
 
-  return currentLevel.blocks.every((block: any) => progress.blockScores[block.id] === 100);
+  return currentLevel.blocks.every(block => progress.blockScores[block.id] === 100);
 }
 
 export function resetProgress(): void {
