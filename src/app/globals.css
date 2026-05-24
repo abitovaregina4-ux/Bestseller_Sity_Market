@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --duo-green: #58CC02;
+  --duo-green-dark: #46A302;
+  --duo-blue: #1CB0F6;
+  --duo-red: #FF4B4B;
+  --duo-yellow: #FFC800;
+  --duo-purple: #CE82FF;
+  --duo-orange: #FF9600;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: #131F24;
+  color: #FFFFFF;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.duo-btn {
+  @apply font-bold rounded-2xl transition-all duration-150 active:translate-y-1;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.duo-btn:active {
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.duo-btn-green {
+  @apply bg-duo-green text-white hover:bg-duo-greenDark;
+}
+
+.duo-btn-blue {
+  @apply bg-duo-blue text-white hover:bg-duo-blueDark;
+}
+
+.duo-btn-red {
+  @apply bg-duo-red text-white hover:bg-duo-redDark;
+}
+
+.duo-btn-yellow {
+  @apply bg-duo-yellow text-duo-black hover:bg-duo-yellowDark;
+}
+
+.duo-btn-purple {
+  @apply bg-duo-purple text-white hover:bg-duo-purpleDark;
+}
+
+.duo-btn-orange {
+  @apply bg-duo-orange text-white hover:bg-duo-orangeDark;
+}
+
+.duo-btn-gray {
+  @apply bg-duo-gray text-duo-grayDarker hover:bg-duo-grayDark;
+}
+
+.duo-card {
+  @apply rounded-2xl p-6 transition-all duration-200;
+  background: #1A2C38;
+  border: 2px solid #37464F;
+}
+
+.duo-card:hover {
+  border-color: #4B5C66;
+}
+
+.duo-input {
+  @apply w-full rounded-xl px-4 py-3 font-semibold transition-all duration-200 outline-none;
+  background: #1A2C38;
+  border: 2px solid #37464F;
+  color: white;
+}
+
+.duo-input:focus {
+  border-color: #1CB0F6;
+}
+
+.duo-progress {
+  @apply h-4 rounded-full overflow-hidden;
+  background: #37464F;
+}
+
+.duo-progress-fill {
+  @apply h-full rounded-full transition-all duration-500;
+}
+
+.flashcard-container {
+  perspective: 1000px;
+}
+
+.flashcard-inner {
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flashcard-container.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+
+.flashcard-front,
+.flashcard-back {
+  backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+}
+
+.quiz-option {
+  @apply w-full rounded-xl px-6 py-4 font-bold text-left transition-all duration-200 cursor-pointer;
+  background: #1A2C38;
+  border: 2px solid #37464F;
+  color: white;
+}
+
+.quiz-option:hover:not(:disabled) {
+  border-color: #1CB0F6;
+  background: #1F3A47;
+}
+
+.quiz-option.correct {
+  @apply border-duo-green bg-green-900/30;
+}
+
+.quiz-option.incorrect {
+  @apply border-duo-red bg-red-900/30;
+}
+
+.quiz-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.level-path {
+  position: relative;
+}
+
+.level-path::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, #37464F, #58CC02, #1CB0F6, #CE82FF);
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+  z-index: 1000;
+}
