@@ -125,3 +125,28 @@ export function allTopicsViewed(progress: UserProgress, blockId: string, ranks: 
   }
   return false;
 }
+
+// Совместимость со старыми импортами
+export function completeLesson(progress: UserProgress, lessonId: string, score: number): UserProgress {
+  if (progress.completedTopics.includes(lessonId)) return progress;
+  return addXP({
+    ...progress,
+    completedTopics: [...progress.completedTopics, lessonId],
+    topicScores: { ...progress.topicScores, [lessonId]: score },
+  }, score * 10);
+}
+
+export function completeBlock(progress: UserProgress, blockId: string, score: number): UserProgress {
+  const completed = progress.completedBlocks.includes(blockId);
+  const currentScore = progress.blockScores[blockId] || 0;
+  if (currentScore >= score) return progress;
+  return addXP({
+    ...progress,
+    completedBlocks: completed ? progress.completedBlocks : [...progress.completedBlocks, blockId],
+    blockScores: { ...progress.blockScores, [blockId]: score },
+  }, score * 20);
+}
+
+export function isLessonUnlocked(_progress: UserProgress, _lessonId: string, _blockId?: string, _levelId?: string): boolean {
+  return true;
+}

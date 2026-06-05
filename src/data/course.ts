@@ -507,3 +507,6 @@ export const ranks: Rank[] = [
     ],
   },
 ];
+
+// Совместимость со старыми импортами (Level[])
+export const courseData = ranks;
