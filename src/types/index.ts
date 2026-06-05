@@ -1,8 +1,8 @@
-export interface Flashcard {
+export interface Topic {
   id: string;
-  front: string;
-  back: string;
-  icon?: string;
+  number: number;
+  title: string;
+  description: string;
 }
 
 export interface QuizQuestion {
@@ -13,50 +13,37 @@ export interface QuizQuestion {
   explanation: string;
 }
 
-export interface Lesson {
-  id: string;
-  title: string;
-  icon: string;
-  description: string;
-  flashcards: Flashcard[];
-  quiz: QuizQuestion[];
-}
-
 export interface Block {
   id: string;
   title: string;
-  description: string;
+  number: number;
   icon: string;
-  color: string;
-  lessons: Lesson[];
+  topics: Topic[];
   exam: QuizQuestion[];
 }
 
-export interface Level {
-  id: 'basic' | 'intermediate' | 'advanced';
+export interface Rank {
+  id: string;
   title: string;
   subtitle: string;
   icon: string;
   color: string;
   blocks: Block[];
+  certificateTitle: string;
+  certificateSubtitle: string;
 }
 
 export interface UserProgress {
+  name: string;
   xp: number;
   streak: number;
   lastActiveDate: string;
-  completedLessons: string[];
+  completedTopics: string[];
   completedBlocks: string[];
-  lessonScores: Record<string, number>;
+  completedRanks: string[];
+  topicScores: Record<string, number>;
   blockScores: Record<string, number>;
-  currentLevel: 'basic' | 'intermediate' | 'advanced';
-}
-
-export interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  unlocked: boolean;
-  condition: (progress: UserProgress) => boolean;
+  rankScores: Record<string, number>;
+  currentRank: string;
+  certificates: string[];
 }

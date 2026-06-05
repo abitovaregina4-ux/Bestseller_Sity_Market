@@ -178,3 +178,20 @@ body {
   pointer-events: none;
   z-index: 1000;
 }
+
+@media print {
+  body {
+    background: white !important;
+    margin: 0;
+    padding: 0;
+  }
+  #certificate {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 2cm !important;
+    margin: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

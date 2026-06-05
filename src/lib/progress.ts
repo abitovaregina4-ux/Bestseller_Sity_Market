@@ -1,16 +1,20 @@
-import { UserProgress, Lesson, Block, Level } from '@/types';
+import { UserProgress, Rank } from '@/types';
 
-const PROGRESS_KEY = 'supermarket-training-progress';
+const PROGRESS_KEY = 'retailpro-progress';
 
 const defaultProgress: UserProgress = {
+  name: '',
   xp: 0,
   streak: 0,
   lastActiveDate: '',
-  completedLessons: [],
+  completedTopics: [],
   completedBlocks: [],
-  lessonScores: {},
+  completedRanks: [],
+  topicScores: {},
   blockScores: {},
-  currentLevel: 'basic',
+  rankScores: {},
+  currentRank: 'rank-1',
+  certificates: [],
 };
 
 export function getProgress(): UserProgress {
@@ -18,8 +22,8 @@ export function getProgress(): UserProgress {
   try {
     const saved = localStorage.getItem(PROGRESS_KEY);
     if (saved) {
-      const progress = JSON.parse(saved);
-      return { ...defaultProgress, ...progress };
+      const p = JSON.parse(saved);
+      return { ...defaultProgress, ...p };
     }
   } catch (e) {
     console.error('Failed to load progress:', e);
@@ -36,130 +40,88 @@ export function saveProgress(progress: UserProgress): void {
   }
 }
 
+export function resetProgress(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(PROGRESS_KEY);
+}
+
 export function updateStreak(progress: UserProgress): UserProgress {
   const today = new Date().toDateString();
   if (progress.lastActiveDate === today) return progress;
-
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
   let newStreak = progress.streak;
-  if (progress.lastActiveDate === yesterday.toDateString()) {
+  if (progress.lastActiveDate === yesterday) {
     newStreak += 1;
-  } else if (progress.lastActiveDate !== today) {
+  } else {
     newStreak = 1;
   }
-
   return { ...progress, streak: newStreak, lastActiveDate: today };
 }
 
 export function addXP(progress: UserProgress, amount: number): UserProgress {
-  const updated = { ...progress, xp: progress.xp + amount };
-  return updateStreak(updated);
+  return { ...progress, xp: progress.xp + amount };
 }
 
-export function completeLesson(progress: UserProgress, lessonId: string, score: number): UserProgress {
-  const completedLessons = [...progress.completedLessons];
-  if (!completedLessons.includes(lessonId)) {
-    completedLessons.push(lessonId);
+export function completeTopic(progress: UserProgress, topicId: string): UserProgress {
+  if (progress.completedTopics.includes(topicId)) return progress;
+  return addXP({
+    ...progress,
+    completedTopics: [...progress.completedTopics, topicId],
+    topicScores: { ...progress.topicScores, [topicId]: 100 },
+  }, 5);
+}
+
+export function completeBlockExam(progress: UserProgress, blockId: string, score: number): UserProgress {
+  const completed = progress.completedBlocks.includes(blockId);
+  const currentScore = progress.blockScores[blockId] || 0;
+  if (currentScore >= score) return progress;
+  return addXP({
+    ...progress,
+    completedBlocks: completed ? progress.completedBlocks : [...progress.completedBlocks, blockId],
+    blockScores: { ...progress.blockScores, [blockId]: score },
+  }, score * 3);
+}
+
+export function completeRank(progress: UserProgress, rankId: string, score: number): UserProgress {
+  const completed = progress.completedRanks.includes(rankId);
+  const currentScore = progress.rankScores[rankId] || 0;
+  if (currentScore >= score) return progress;
+  return addXP({
+    ...progress,
+    completedRanks: completed ? progress.completedRanks : [...progress.completedRanks, rankId],
+    rankScores: { ...progress.rankScores, [rankId]: score },
+    certificates: [...new Set([...progress.certificates, rankId])],
+  }, score * 10);
+}
+
+export function isBlockUnlocked(progress: UserProgress, ranks: Rank[], rankId: string, blockNumber: number): boolean {
+  if (blockNumber === 0) {
+    const rankIndex = ranks.findIndex(r => r.id === rankId);
+    if (rankIndex === 0) return true;
+    const prevRank = ranks[rankIndex - 1];
+    return progress.certificates.includes(prevRank?.id || '');
   }
-  const lessonScores = { ...progress.lessonScores };
-  lessonScores[lessonId] = Math.max(lessonScores[lessonId] || 0, score);
-  return addXP({ ...progress, completedLessons, lessonScores }, score * 10);
+  const rank = ranks.find(r => r.id === rankId);
+  if (!rank) return false;
+  const prevBlock = rank.blocks[blockNumber - 1];
+  if (!prevBlock) return true;
+  return progress.blockScores[prevBlock.id] === 100;
 }
 
-export function completeBlock(progress: UserProgress, blockId: string, score: number): UserProgress {
-  const completedBlocks = [...progress.completedBlocks];
-  if (!completedBlocks.includes(blockId)) {
-    completedBlocks.push(blockId);
-  }
-  const blockScores = { ...progress.blockScores };
-  blockScores[blockId] = Math.max(blockScores[blockId] || 0, score);
-  return addXP({ ...progress, completedBlocks, blockScores }, score * 20);
+export function isRankUnlocked(progress: UserProgress, ranks: Rank[], rankId: string): boolean {
+  const rankIndex = ranks.findIndex(r => r.id === rankId);
+  if (rankIndex === 0) return true;
+  const prevRank = ranks[rankIndex - 1];
+  return progress.certificates.includes(prevRank?.id || '');
 }
 
-function findLessonInCourse(courseData: Level[], lessonId: string): { lesson: Lesson; block: Block; level: Level } | null {
-  for (const level of courseData) {
-    for (const block of level.blocks) {
-      const lesson = block.lessons.find(l => l.id === lessonId);
-      if (lesson) return { lesson, block, level };
+export function allTopicsViewed(progress: UserProgress, blockId: string, ranks: Rank[]): boolean {
+  for (const rank of ranks) {
+    for (const block of rank.blocks) {
+      if (block.id === blockId) {
+        return block.topics.every(t => progress.completedTopics.includes(t.id));
+      }
     }
   }
-  return null;
-}
-
-function findBlockInCourse(courseData: Level[], blockId: string): { block: Block; level: Level } | null {
-  for (const level of courseData) {
-    const block = level.blocks.find(b => b.id === blockId);
-    if (block) return { block, level };
-  }
-  return null;
-}
-
-export function isLessonUnlocked(
-  progress: UserProgress,
-  courseData: Level[],
-  lessonId: string
-): boolean {
-  const found = findLessonInCourse(courseData, lessonId);
-  if (!found) return false;
-
-  const { level } = found;
-  const levelIndex = ['basic', 'intermediate', 'advanced'].indexOf(level.id);
-  const currentLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(progress.currentLevel);
-
-  if (levelIndex > currentLevelIndex) return false;
-
-  const { block, lesson } = found;
-  const blockIndex = level.blocks.indexOf(block);
-  const lessonIndex = block.lessons.indexOf(lesson);
-
-  if (lessonIndex === 0) return true;
-
-  const previousLesson = block.lessons[lessonIndex - 1];
-  if (!previousLesson) return true;
-
-  return progress.lessonScores[previousLesson.id] === 100;
-}
-
-export function isBlockUnlocked(
-  progress: UserProgress,
-  courseData: Level[],
-  blockId: string
-): boolean {
-  const found = findBlockInCourse(courseData, blockId);
-  if (!found) return false;
-
-  const { level } = found;
-  const levelIndex = ['basic', 'intermediate', 'advanced'].indexOf(level.id);
-  const currentLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(progress.currentLevel);
-
-  if (levelIndex > currentLevelIndex) return false;
-
-  const { block } = found;
-  const blockIndex = level.blocks.indexOf(block);
-  if (blockIndex === 0) return true;
-
-  const previousBlock = level.blocks[blockIndex - 1];
-  if (!previousBlock) return true;
-
-  return progress.blockScores[previousBlock.id] === 100;
-}
-
-export function canAdvanceLevel(progress: UserProgress, courseData: Level[], targetLevel: string): boolean {
-  const currentLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(progress.currentLevel);
-  const targetLevelIndex = ['basic', 'intermediate', 'advanced'].indexOf(targetLevel);
-
-  if (targetLevelIndex <= currentLevelIndex) return true;
-  if (targetLevelIndex !== currentLevelIndex + 1) return false;
-
-  const currentLevel = courseData[currentLevelIndex];
-  if (!currentLevel) return false;
-
-  return currentLevel.blocks.every(block => progress.blockScores[block.id] === 100);
-}
-
-export function resetProgress(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(PROGRESS_KEY);
+  return false;
 }

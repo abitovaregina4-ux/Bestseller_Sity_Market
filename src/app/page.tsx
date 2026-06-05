@@ -2,45 +2,92 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { courseData } from '@/data/course';
-import { getProgress, updateStreak, saveProgress } from '@/lib/progress';
+import { ranks } from '@/data/course';
+import { getProgress, updateStreak, saveProgress, isRankUnlocked, resetProgress } from '@/lib/progress';
 import { UserProgress } from '@/types';
-import { Star, Trophy, Flame, ChevronRight, Lock, CheckCircle, BookOpen, Target, BarChart3 } from 'lucide-react';
+import { Star, Flame, Trophy, ChevronRight, CheckCircle, Lock, BookOpen } from 'lucide-react';
 
 export default function Home() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [name, setName] = useState('');
 
   useEffect(() => {
     const p = getProgress();
     const updated = updateStreak(p);
     saveProgress(updated);
     setProgress(updated);
+    if (!p.name) setShowNameInput(true);
   }, []);
+
+  const handleSetName = () => {
+    if (!name.trim()) return;
+    const p = getProgress();
+    const updated = { ...p, name: name.trim() };
+    saveProgress(updated);
+    setProgress(updated);
+    setShowNameInput(false);
+  };
+
+  const handleReset = () => {
+    if (confirm('Сбросить весь прогресс?')) {
+      resetProgress();
+      window.location.reload();
+    }
+  };
 
   if (!progress) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#131F24]">
         <div className="animate-pulse text-duo-green text-2xl font-bold">Загрузка...</div>
       </div>
     );
   }
 
-  const totalLessons = courseData.reduce((acc, level) => acc + level.blocks.reduce((a, b) => a + b.lessons.length, 0), 0);
-  const completedLessons = progress.completedLessons.length;
-  const progressPercent = Math.round((completedLessons / totalLessons) * 100);
+  if (showNameInput) {
+    return (
+      <div className="min-h-screen bg-[#131F24] flex items-center justify-center p-4">
+        <div className="duo-card max-w-md w-full text-center bg-gradient-to-br from-duo-green/10 to-duo-blue/10 border-duo-green/30">
+          <div className="text-6xl mb-4">👋</div>
+          <h1 className="text-2xl font-extrabold mb-2">Добро пожаловать!</h1>
+          <p className="text-gray-400 mb-6">Введите ваше ФИО для начала обучения</p>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSetName()}
+            placeholder="Иванов Иван Иванович"
+            className="duo-input mb-4 text-center text-lg"
+            autoFocus
+          />
+          <button
+            onClick={handleSetName}
+            disabled={!name.trim()}
+            className={`duo-btn px-8 py-3 w-full font-extrabold text-lg ${name.trim() ? 'duo-btn-green' : 'duo-btn-gray'}`}
+          >
+            Начать обучение 🚀
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const totalTopics = ranks.reduce((a, r) => a + r.blocks.reduce((b, bl) => b + bl.topics.length, 0), 0);
+  const completedTopics = progress.completedTopics.length;
+  const progressPercent = Math.round((completedTopics / totalTopics) * 100);
 
   return (
     <div className="min-h-screen bg-[#131F24]">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-[#1A2C38]/95 backdrop-blur-sm border-b border-[#37464F]">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-duo-green flex items-center justify-center text-xl font-black">
-              R
+            <div className="w-10 h-10 rounded-xl bg-duo-green flex items-center justify-center text-xl font-black">R</div>
+            <div>
+              <span className="font-extrabold text-lg">RetailPro</span>
+              <span className="text-sm text-gray-400 ml-2">{progress.name}</span>
             </div>
-            <span className="font-extrabold text-xl text-white">RetailPro</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 bg-[#37464F] rounded-full px-3 py-1.5">
               <Flame className="w-5 h-5 text-duo-orange" />
               <span className="font-bold text-duo-orange">{progress.streak}</span>
@@ -54,148 +101,73 @@ export default function Home() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Welcome Section */}
         <div className="duo-card mb-8 bg-gradient-to-r from-duo-green/20 to-duo-blue/20 border-duo-green/30">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-extrabold mb-2">Добро пожаловать! 👋</h1>
-              <p className="text-gray-400 mb-4">Ваш прогресс обучения</p>
+              <h1 className="text-2xl font-extrabold mb-1">Привет, {progress.name}! 👋</h1>
+              <p className="text-gray-400 mb-3">Общий прогресс обучения</p>
               <div className="duo-progress w-full max-w-md">
-                <div
-                  className="duo-progress-fill bg-duo-green"
-                  style={{ width: `${progressPercent}%` }}
-                />
+                <div className="duo-progress-fill bg-duo-green" style={{ width: `${progressPercent}%` }} />
               </div>
-              <p className="text-sm text-gray-400 mt-2">{completedLessons} из {totalLessons} уроков ({progressPercent}%)</p>
+              <p className="text-sm text-gray-400 mt-1">{completedTopics} из {totalTopics} тем ({progressPercent}%)</p>
             </div>
             <Trophy className="w-20 h-20 text-duo-yellow float" />
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="duo-card text-center">
-            <Star className="w-8 h-8 text-duo-yellow mx-auto mb-2" />
-            <div className="text-2xl font-extrabold">{progress.xp}</div>
-            <div className="text-sm text-gray-400">Опыт (XP)</div>
-          </div>
-          <div className="duo-card text-center">
-            <Flame className="w-8 h-8 text-duo-orange mx-auto mb-2" />
-            <div className="text-2xl font-extrabold">{progress.streak}</div>
-            <div className="text-sm text-gray-400">Дней подряд</div>
-          </div>
-          <div className="duo-card text-center">
-            <CheckCircle className="w-8 h-8 text-duo-green mx-auto mb-2" />
-            <div className="text-2xl font-extrabold">{completedLessons}</div>
-            <div className="text-sm text-gray-400">Уроков пройдено</div>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-extrabold flex items-center gap-2">
+            <BookOpen className="w-6 h-6" />
+            Ранги обучения
+          </h2>
+          <button onClick={handleReset} className="text-sm text-duo-red hover:underline">Сбросить прогресс</button>
         </div>
 
-        {/* Levels */}
-        <h2 className="text-xl font-extrabold mb-4 flex items-center gap-2">
-          <BookOpen className="w-6 h-6" />
-          Уровни обучения
-        </h2>
-
         <div className="space-y-4">
-          {courseData.map((level, index) => {
-            const levelLessons = level.blocks.reduce((acc, b) => acc + b.lessons.length, 0);
-            const levelCompleted = level.blocks.reduce((acc, b) => acc + b.lessons.filter(l => progress.lessonScores[l.id] === 100).length, 0);
-            const levelProgress = Math.round((levelCompleted / levelLessons) * 100);
-            const isUnlocked = index === 0 || progress.currentLevel !== level.id || levelProgress > 0;
-            const isCompleted = levelProgress === 100;
+          {ranks.map((rank, i) => {
+            const unlocked = isRankUnlocked(progress, ranks, rank.id);
+            const completed = progress.certificates.includes(rank.id);
+            const rankTopics = rank.blocks.reduce((a, b) => a + b.topics.length, 0);
+            const rankDone = rank.blocks.reduce((a, b) => a + b.topics.filter(t => progress.completedTopics.includes(t.id)).length, 0);
+            const rankPct = Math.round((rankDone / rankTopics) * 100);
 
-            const colorMap: Record<string, string> = {
-              'duo-green': 'from-duo-green/20 to-duo-green/5 border-duo-green/30',
-              'duo-blue': 'from-duo-blue/20 to-duo-blue/5 border-duo-blue/30',
-              'duo-purple': 'from-duo-purple/20 to-duo-purple/5 border-duo-purple/30',
-            };
-
-            const iconMap: Record<string, string> = {
-              'duo-green': 'text-duo-green',
-              'duo-blue': 'text-duo-blue',
-              'duo-purple': 'text-duo-purple',
+            const colorBorder: Record<string, string> = {
+              'duo-green': 'border-duo-green/30 from-duo-green/20',
+              'duo-blue': 'border-duo-blue/30 from-duo-blue/20',
+              'duo-purple': 'border-duo-purple/30 from-duo-purple/20',
+              'duo-orange': 'border-duo-orange/30 from-duo-orange/20',
             };
 
             return (
               <Link
-                key={level.id}
-                href={`/level/${level.id}`}
-                className={`duo-card bg-gradient-to-r ${colorMap[level.color]} block hover:scale-[1.02] transition-transform ${!isUnlocked ? 'opacity-50' : ''}`}
+                key={rank.id}
+                href={unlocked || completed ? `/rank/${rank.id}` : '#'}
+                onClick={(e) => { if (!unlocked && !completed) e.preventDefault(); }}
+                className={`duo-card bg-gradient-to-r ${colorBorder[rank.color] || 'from-[#1A2C38]'} block transition-all ${unlocked || completed ? 'hover:scale-[1.02]' : 'opacity-40 cursor-not-allowed'}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl bg-[#1A2C38] flex items-center justify-center text-3xl ${iconMap[level.color]}`}>
-                      {isCompleted ? '✅' : level.icon}
+                    <div className="w-14 h-14 rounded-2xl bg-[#1A2C38] flex items-center justify-center text-3xl">
+                      {completed ? '✅' : unlocked ? rank.icon : '🔒'}
                     </div>
                     <div>
-                      <h3 className="font-extrabold text-lg">{level.title}</h3>
-                      <p className="text-gray-400 text-sm">{level.subtitle} • {level.blocks.length} блоков • {levelLessons} уроков</p>
+                      <h3 className="font-extrabold text-lg">{rank.title}</h3>
+                      <p className="text-gray-400 text-sm">{rank.subtitle} • {rank.blocks.length} блок • {rankTopics} тем</p>
                       <div className="duo-progress w-48 mt-2">
-                        <div
-                          className={`duo-progress-fill ${level.color === 'duo-green' ? 'bg-duo-green' : level.color === 'duo-blue' ? 'bg-duo-blue' : 'bg-duo-purple'}`}
-                          style={{ width: `${levelProgress}%` }}
-                        />
+                        <div className={`duo-progress-fill ${rank.color === 'duo-green' ? 'bg-duo-green' : rank.color === 'duo-blue' ? 'bg-duo-blue' : rank.color === 'duo-purple' ? 'bg-duo-purple' : 'bg-duo-orange'}`}
+                          style={{ width: `${rankPct}%` }} />
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-400">{levelProgress}%</span>
-                    {isUnlocked ? (
-                      <ChevronRight className="w-6 h-6 text-gray-400" />
-                    ) : (
-                      <Lock className="w-6 h-6 text-gray-500" />
-                    )}
+                    {completed && <CheckCircle className="w-6 h-6 text-duo-green" />}
+                    <span className="font-bold text-sm text-gray-400">{rankPct}%</span>
+                    {unlocked && <ChevronRight className="w-5 h-5 text-gray-400" />}
                   </div>
                 </div>
               </Link>
             );
           })}
-        </div>
-
-        {/* Features */}
-        <h2 className="text-xl font-extrabold mt-8 mb-4 flex items-center gap-2">
-          <Target className="w-6 h-6" />
-          Возможности платформы
-        </h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="duo-card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-duo-green/20 flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-duo-green" />
-            </div>
-            <div>
-              <div className="font-bold text-sm">Карточки</div>
-              <div className="text-xs text-gray-400">Anki-стиль</div>
-            </div>
-          </div>
-          <div className="duo-card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-duo-blue/20 flex items-center justify-center">
-              <Target className="w-5 h-5 text-duo-blue" />
-            </div>
-            <div>
-              <div className="font-bold text-sm">Тесты</div>
-              <div className="text-xs text-gray-400">После каждого урока</div>
-            </div>
-          </div>
-          <div className="duo-card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-duo-purple/20 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-duo-purple" />
-            </div>
-            <div>
-              <div className="font-bold text-sm">KPI</div>
-              <div className="text-xs text-gray-400">Отслеживание прогресса</div>
-            </div>
-          </div>
-          <div className="duo-card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-duo-yellow/20 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-duo-yellow" />
-            </div>
-            <div>
-              <div className="font-bold text-sm">Экзамены</div>
-              <div className="text-xs text-gray-400">После каждого блока</div>
-            </div>
-          </div>
         </div>
       </main>
     </div>
